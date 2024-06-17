@@ -1,0 +1,25 @@
+FROM node:20
+
+# Dependencies for Prisma
+RUN apt-get update -y && apt-get install -y openssl
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+# Copy wait-for-it script from the current directory
+COPY wait-for-it.sh /app/wait-for-it.sh
+RUN chmod +x /app/wait-for-it.sh
+
+# Generate Prisma client
+RUN npx prisma generate
+RUN npm run build
+# Expose the port
+EXPOSE 3001
+
+# Wait for the database to be ready and run migrations, then start the application
+ENTRYPOINT ["sh", "-c", "./wait-for-it.sh customer-db:5432 -- npx prisma migrate dev --name 'init' && npm run start:prod"]

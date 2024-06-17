@@ -1,0 +1,84 @@
+version: '4'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  product-db:
+    image: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: test
+    volumes:
+      - ./data/product-db:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  product:
+    build:
+      context: ./api_product
+      dockerfile: Dockerfile
+    ports:
+      - 3001:3001
+    depends_on:
+      - product-db
+      - rabbitmq
+    environment:
+      - DATABASE_URL=postgresql://admin:test@product-db:5432/order?schema=public
+    networks:
+      - app-network
+
+  customer-db:
+    image: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: test
+    volumes:
+      - ./data/customer-db:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  customer:
+    build:
+      context: ./api_customer
+      dockerfile: Dockerfile
+    ports:
+      - 3002:3001
+    depends_on:
+      - customer-db
+      - rabbitmq
+    environment:
+      - DATABASE_URL=postgresql://admin:test@customer-db:5432/order?schema=public
+    networks:
+      - app-network
+
+  order-db:
+    image: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: test
+    volumes:
+      - ./data/order-db:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  order:
+    build:
+      context: ./api_order
+      dockerfile: Dockerfile
+    ports:
+      - 3003:3001
+    depends_on:
+      - order-db
+      - rabbitmq
+    environment:
+      - DATABASE_URL=postgresql://admin:test@order-db:5432/order?schema=public
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
